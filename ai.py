@@ -12,7 +12,7 @@ class AI():
         """
         Initializes the AI class.
 
-        :param config: Configuration dictionary containing 'token', 'initial_instructions', and 'gpt_model'.
+        :param config: Configuration dictionary containing 'token', 'prompt', 'temperature', and 'gpt_model'.
         :param verbose: Whether to print interactions to the console. Default is False.
         """
         try:
@@ -20,31 +20,38 @@ class AI():
         except KeyError:
             self.token = SecretStr('')
         try:
-            self.instructions: str = config['initial_instructions']
+            self.prompt: str = config['prompt']
         except KeyError:
-            self.instructions = '''You are a friendly and funny version of Frida Kahlo (the Mexican painter). You provide short but funny answers. You are interested in knowing more about the person you're talking to.'''
+            self.prompt = '''You are a friendly and funny version of Frida Kahlo (the Mexican painter). You provide short but funny answers. You are interested in knowing more about the person you're talking to.'''
+        try:
+            self.temperature: float = float(config['temperature'])
+        except KeyError:
+            self.temperature = 0.
         try:
             self.model = config['gpt_model']
         except KeyError:
-            self.model = 'gpt3-5-turbo'
+            self.model = 'gpt-4o-mini'
             
         # Initialize history with the instruction message
-        self.history: list[Any] = [SystemMessage(content=self.instructions)]
+        self.history: list[Any] = [SystemMessage(content=self.prompt)]
         
         # Initialize the chat model
-        self.chat = ChatOpenAI(client=None, model=self.model, api_key=self.token, temperature=0)
+        self.chat = ChatOpenAI(client=None, model=self.model, api_key=self.token, temperature=self.temperature)
         
         self.verbose: bool = verbose
 
-    def reset(self, instructions: str = '') -> None:
+    def reset(self, prompt: str = '') -> None:
         """
-        Resets the chat history and optionally updates the instructions.
+        Resets the chat history and optionally updates the prompt.
 
-        :param instructions: New instructions to set the behavior of the AI. If not provided, the original instructions are used.
+        :param prompt: New prompt to set the behavior of the AI. If not provided, the original prompt are used.
         """
-        if instructions:
-            self.instructions = instructions
-        self.history = [SystemMessage(content=self.instructions)]
+        if prompt:
+            self.prompt = prompt
+        if len(self.history) > 0:
+            self.history[0] = SystemMessage(content=self.prompt)
+        else:
+            self.history = [SystemMessage(content=self.prompt)]
     
     def set_history(self, history:List[Dict[str,str]]) -> None:
         """
@@ -54,7 +61,7 @@ class AI():
             history (List[Dict[str,str]]): List of messages, where each message is formatted as a dictionary with two
             keys: 'author' and 'content'. The value of 'author' can be either 'human' or 'ai'.
         """
-        self.history = [SystemMessage(content=self.instructions)]
+        self.history = [SystemMessage(content=self.prompt)]
         for message in history:
             author = message['author'].lower()
             content = message['content']
@@ -94,8 +101,9 @@ class AI():
         if self.verbose:
             print("Human: " + question)
         try:
-            result: BaseMessage = self.chat(self.history)
-        except:
+            result: BaseMessage = self.chat.invoke(self.history)
+        except Exception as err:
+            print(err)
             result = AIMessage(content="I cannot provide an answer right now. Please, try again later.")
         self.history.append(result)
         if self.verbose:
@@ -110,7 +118,7 @@ if __name__ == '__main__':
     var = os.getenv('OPENAI_API_KEY')
     config = {
         'token': var if var is not None else '',
-        'initial_instructions':'You always start your sentences with "I think"'
+        'prompt':'You always start your sentences with "I think"'
     }
     ai = AI(config, verbose=True)
     ai.ask('Hello!')

@@ -24,7 +24,7 @@ class TestAI:
     def test_init(self, ai_instance):
         ai, _ , _ = ai_instance
         expected_instructions = '''You are a friendly and funny version of Frida Kahlo (the Mexican painter). You provide short but funny answers. You are interested in knowing more about the person you're talking to.'''
-        assert ai.instructions == expected_instructions
+        assert ai.prompt == expected_instructions
         assert ai.verbose == False
         assert isinstance(ai.chat, ChatOpenAI)
         assert isinstance(ai.history[0], SystemMessage)
@@ -33,7 +33,7 @@ class TestAI:
         ai, _ , _ = ai_instance
         new_instructions = 'New instructions'
         ai.reset(new_instructions)
-        assert ai.instructions == new_instructions
+        assert ai.prompt == new_instructions
         assert len(ai.history) == 1  # there should be a single SystemMessage in history
         assert isinstance(ai.history[0], SystemMessage)
 
@@ -59,7 +59,7 @@ class TestAI:
 
     def test_instructions_are_followed(self):
         instructions = "you are a creative assistant, who provides short answers always with words starting with vowels."
-        ai = AI({'token':os.getenv('OPENAI_API_KEY'), 'initial_instructions':instructions})
+        ai = AI({'token':os.getenv('OPENAI_API_KEY'), 'prompt':instructions})
         response = ai.ask('how are you feeling today')
         for word in response.split(' '): # ai must answer with all words starting with vowels
             assert word[0].lower() in 'aeiou'

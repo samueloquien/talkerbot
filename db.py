@@ -29,8 +29,9 @@ class DB():
         default_config = {
             'telegram_user_id': telegram_user_id,
             'token': '',
-            'gpt_model': 'gpt-3.5-turbo',
-            'initial_instructions': 'You are a friendly and funny version of Frida Kahlo (the Mexican painter). You provide short but funny answers. You are interested in knowing more about the person you\'re talking to.'
+            'gpt_model': 'gpt-4o-mini',
+            'temperature': 0,
+            'prompt': 'You are a friendly and funny version of Frida Kahlo (the Mexican painter). You provide short but funny answers. You are interested in knowing more about the person you\'re talking to.'
         }
         self.openai_config.insert_one(default_config)
 
@@ -47,22 +48,25 @@ class DB():
         else:
             return {}
 
-    def update_openai_config(self, telegram_user_id: str, token: str = '', gpt_model: str = '', initial_instructions: str = '') -> None:
+    def update_openai_config(self, telegram_user_id: str, token: str = '', gpt_model: str = '', temperature: float = 0., prompt: str = '') -> None:
         """
         Update the OpenAI configuration for the specified user.
 
         :param telegram_user_id: The Telegram user ID to update the configuration for.
         :param token: The API token for OpenAI.
         :param gpt_model: The GPT model to use.
-        :param initial_instructions: The initial instructions for the user.
+        :param temperature: The temperature (kind of randomness) of the AI model.
+        :param prompt: The initial instructions for the AI model.
         """
         config: Dict[str, str] = {}
         if token:
             config['token'] = token
         if gpt_model:
             config['gpt_model'] = gpt_model
-        if initial_instructions:
-            config['initial_instructions'] = initial_instructions
+        if prompt:
+            config['prompt'] = prompt
+        if temperature and temperature >= 0. and temperature <= 2.:
+            config['temperature'] = f'{temperature}'
         self.openai_config.update_one({'telegram_user_id': telegram_user_id}, {'$set': config})
 
     def delete_openai_config(self, telegram_user_id: str):

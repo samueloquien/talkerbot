@@ -163,3 +163,4 @@ cython_debug/
 
 readme-dev.md
 .env.prod
+.env.dev

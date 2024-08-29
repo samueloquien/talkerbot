@@ -13,16 +13,14 @@ This is a Python FastAPI application that uses the [python-telegram-bot](https:/
 
 ## Deployment on Gcloud Run
 
-Create a `.env` file with the same variables as `.env.template`.
+Create a `.env` file with the same variables as `.env.template`. Alternatively, you can set environment variables in the GCloud console by navigating to Edit & deploy new version -> Edit Container -> Variables & Secrets.
 
 Install Google Cloud Console and run:
 
 ```
 cd talkerbot
-gcloud run deploy
+gcloud run deploy talkerbot --source .
 ```
-
-hit Enter to select the current folder. Next, hit Enter to select the default function name (`talkerbot`). Next select region 13 (`europe-central2`).
 
 This will create an instance of a Cloud Run. Copy the URL.
 
