@@ -8,8 +8,7 @@ ENV PIPENV_VENV_IN_PROJECT 1
 RUN pip install langchain langchain-openai python-dotenv python-telegram-bot fastapi uvicorn pymongo
 
 # Copy the rest of the application code to the working directory
-COPY *.py ./
-COPY .env.prod ./.env
+COPY *.py .env* ./
 
 # Expose the port FastAPI will run on
 EXPOSE 8080
