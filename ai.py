@@ -31,9 +31,20 @@ class AI():
             self.model = config['gpt_model']
         except KeyError:
             self.model = 'gpt-4o-mini'
+        
+        self.model_context_size: Dict[str,int] = {
+            'gpt-4o-mini': 128000,
+            'gpt-4o': 128000,
+            'gpt-4-turbo': 128000,
+            'gpt-4': 8192,
+            'gpt-3.5-turbo': 16385,
+            'default': 8192
+        }
             
         # Initialize history with the instruction message
         self.history: list[Any] = [SystemMessage(content=self.prompt)]
+        
+        self.total_tokens: int = 0
         
         # Initialize the chat model
         self.chat = ChatOpenAI(client=None, model=self.model, api_key=self.token, temperature=self.temperature)
@@ -52,8 +63,8 @@ class AI():
             self.history[0] = SystemMessage(content=self.prompt)
         else:
             self.history = [SystemMessage(content=self.prompt)]
-    
-    def set_history(self, history:List[Dict[str,str]]) -> None:
+
+    def set_history(self, history: List[Dict[str, str]]) -> None:
         """
         Resets the history from a list of messages.
 
@@ -62,6 +73,7 @@ class AI():
             keys: 'author' and 'content'. The value of 'author' can be either 'human' or 'ai'.
         """
         self.history = [SystemMessage(content=self.prompt)]
+        self.total_tokens = 0
         for message in history:
             author = message['author'].lower()
             content = message['content']
@@ -69,7 +81,36 @@ class AI():
                 self.history.append(HumanMessage(content=content))
             if author == 'ai':
                 self.history.append(AIMessage(content=content))
-    
+            if 'tokens' in message:
+                self.total_tokens += int(message['tokens'])
+
+
+    def shorten_history(self, history: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """
+        Shortens the history to ensure the total token count does not exceed a certain threshold.
+
+        Args:
+            history (List[Dict[str, str]]): List of messages, where each message is formatted as a dictionary with keys:
+            'author', 'content', and optionally 'tokens'.
+
+        Returns:
+            List[Dict[str, str]]: The shortened history list.
+        """
+        # Compute used tokens:
+        tokens = 0
+        for message in history:
+            if 'tokens' in message:
+                tokens += int(message['tokens'])
+        max_tokens = self.model_context_size[self.model] if self.model in self.model_context_size else self.model_context_size['default']
+        # Delete oldest messages from history until the context is reduced to
+        # less than 80% maximum context size
+        while tokens > max_tokens * 0.8:
+            tokens -= int(history[0]['tokens'])
+            history.pop(0)
+            logger.info(f'Removing history item due to too much context. Now tokens are: {tokens}')
+        return history
+
+
     def get_json_history(self) -> List[Dict[str, str]]:
         """
         Get the chat history in JSON format.
@@ -88,7 +129,7 @@ class AI():
                 continue
             json_history.append({'author': author, 'content': content})
         return json_history
-            
+
         
     def ask(self, question: str) -> str:
         """
@@ -106,6 +147,9 @@ class AI():
             print(err)
             result = AIMessage(content="I cannot provide an answer right now. Please, try again later.")
         self.history.append(result)
+        usage = result.response_metadata['token_usage']
+        self.prompt_tokens = int(usage['prompt_tokens'])          # tokens from history + question
+        self.completion_tokens = int(usage['completion_tokens'])  # tokens from answer
         if self.verbose:
             print(f"AI:    {result.content}")
         return str(result.content)

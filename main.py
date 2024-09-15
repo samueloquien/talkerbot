@@ -201,11 +201,17 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         response = 'Please, enter a valid token using the /token command.'
     else:
         history = db.read_conversation_history(str(user_id))
+        num_messages = len(history)
         ai = AI(config)
+        history = ai.shorten_history(history)
+        if len(history) != num_messages: # history has been shortened. Update DB.
+            db.update_conversation_history(str(user_id), history, append=False)
         ai.set_history(history)
         response = ai.ask(update.message.text)
-        db.update_conversation_history(str(user_id),[{'author':'human','content':update.message.text},{'author':'ai','content':response}])
-    await update.message.reply_text(response)
+        db.update_conversation_history(str(user_id),[
+                {'author':'human', 'content':update.message.text, 'tokens': str(ai.prompt_tokens - ai.total_tokens)},
+                {'author':'ai','content':response, 'tokens': str(ai.completion_tokens)}
+            ])
     await update.message.reply_text(response, parse_mode='Markdown')
 
 # Add command handlers to the bot
