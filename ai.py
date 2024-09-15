@@ -3,6 +3,9 @@ from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from pydantic.v1.types import SecretStr
 
+from logging_config import *
+logger = logging.getLogger(__name__)
+
 class AI():
     """
     An AI class that interfaces with OpenAI's GPT for answering questions.
@@ -140,18 +143,18 @@ class AI():
         """
         self.history.append(HumanMessage(content=question))
         if self.verbose:
-            print("Human: " + question)
+            logger.debug("Human: " + question)
         try:
             result: BaseMessage = self.chat.invoke(self.history)
         except Exception as err:
-            print(err)
+            logger.error(err)
             result = AIMessage(content="I cannot provide an answer right now. Please, try again later.")
         self.history.append(result)
         usage = result.response_metadata['token_usage']
         self.prompt_tokens = int(usage['prompt_tokens'])          # tokens from history + question
         self.completion_tokens = int(usage['completion_tokens'])  # tokens from answer
         if self.verbose:
-            print(f"AI:    {result.content}")
+            logger.debug(f"AI:    {result.content}")
         return str(result.content)
 
 if __name__ == '__main__':

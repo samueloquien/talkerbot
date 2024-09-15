@@ -4,18 +4,11 @@ from telegram.ext._contexttypes import ContextTypes
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from fastapi import FastAPI, Request, Response
-import logging
+from logging_config import *
 from ai import AI
 from db import DB
 import os, sys
 from dotenv import load_dotenv
-
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-# Set higher logging level for httpx to avoid all GET and POST requests being logged
-logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
