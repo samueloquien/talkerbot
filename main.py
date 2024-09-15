@@ -111,7 +111,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error("Missing update.message or update.effective_user in start command.")
         return
     response = get_greeting_message(update.effective_user.first_name)
-    await update.message.reply_text(response)
+    await update.message.reply_text(response, parse_mode='Markdown')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
@@ -119,7 +119,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error("Missing update.message in help command.")
         return
     response = f"If you want me to respond, please enter the /token command, followed by your OpenAI API token."
-    await update.message.reply_text(response)
+    await update.message.reply_text(response, parse_mode='Markdown')
 
 async def token_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Set the OpenAI token for the current user."""
@@ -128,7 +128,7 @@ async def token_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     token = update.message.text.split()[-1]
     initialize_ai_config(update.effective_user, token)
-    await update.message.reply_text("Alright, let's chat!")
+    await update.message.reply_text("Alright, let's chat!", parse_mode='Markdown')
 
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Update the AI prompt instructions. If no instructions are provided, the default
@@ -145,7 +145,7 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         instructions = get_pig_prompt(update.effective_user)
         reply_text += ' Oink oink!'
     db.update_openai_config(str(user_id), prompt=instructions)
-    await update.message.reply_text(reply_text)
+    await update.message.reply_text(reply_text, parse_mode='Markdown')
 
 async def forget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Forget conversation history."""
@@ -154,7 +154,7 @@ async def forget_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
     user_id = update.effective_user.id
     db.update_conversation_history(str(user_id), [], append=False)
-    await update.message.reply_text("Conversation history deleted.")
+    await update.message.reply_text("Conversation history deleted.", parse_mode='Markdown')
 
 async def temperature_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Update the temperature of the AI model."""
@@ -206,6 +206,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         response = ai.ask(update.message.text)
         db.update_conversation_history(str(user_id),[{'author':'human','content':update.message.text},{'author':'ai','content':response}])
     await update.message.reply_text(response)
+    await update.message.reply_text(response, parse_mode='Markdown')
 
 # Add command handlers to the bot
 ptb.add_handler(CommandHandler("start", start_command))
