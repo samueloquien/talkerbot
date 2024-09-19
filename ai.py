@@ -148,11 +148,18 @@ class AI():
             result: BaseMessage = self.chat.invoke(self.history)
         except Exception as err:
             logger.error(err)
-            result = AIMessage(content="I cannot provide an answer right now. Please, try again later.")
+            if not self.token:
+                result = AIMessage(content="Please provide a valid OpenAI API key with the /token command. Type /help for more info.")
+            else:
+                result = AIMessage(content="I cannot provide an answer right now. Please, try again later.")
         self.history.append(result)
-        usage = result.response_metadata['token_usage']
-        self.prompt_tokens = int(usage['prompt_tokens'])          # tokens from history + question
-        self.completion_tokens = int(usage['completion_tokens'])  # tokens from answer
+        try:
+            usage = result.response_metadata['token_usage']
+            self.prompt_tokens = int(usage['prompt_tokens'])          # tokens from history + question
+            self.completion_tokens = int(usage['completion_tokens'])  # tokens from answer
+        except:
+            self.prompt_tokens = 0
+            self.completion_tokens = 0
         if self.verbose:
             logger.debug(f"AI:    {result.content}")
         return str(result.content)

@@ -47,7 +47,7 @@ def get_greeting_message(username: str | None = None) -> str:
     msg = f"Hi{username}! I'm Talker, your pig friend. I'm happy to engage in endless " \
           "conversations with you. But please, enter the /token command, followed by " \
           "your OpenAI API token. Otherwise I'm brainless!\nEnter the /help command " \
-          "for further options."
+          "for details and further options."
     return msg
 
 def initialize_ai_config(user: User, token: str):
@@ -111,7 +111,23 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not update.message:
         logger.error("Missing update.message in help command.")
         return
-    response = f"If you want me to respond, please enter the /token command, followed by your OpenAI API token."
+    response = """This is *Talker*, a chatbot that allows you to interact with OpenAI language models.
+
+The following commands allow you to customize your experience:
+- /start Shows a greeting message.
+- /help Shows this message.
+- /token `<OPENAI API KEY>` Sets your OpenAI API token.
+- /reset `<instructions>` Provides initial instructions for the bot to know how to behave and format its answers. If no `<instructions>` are provided, the default ones are set (a funny and friendly pig).
+- /forget Makes the bot forget the conversation. Only the initial instructions will be maintained. Notice that it's recommended to /forget often for two reasons: having a short context window reduces OpenAI API costs (less context tokens), and forgetting when you switch conversation topic helps the model provide better answers.
+- /model `<model_name>` Sets the OpenAI model you want to interact with. Be aware that using more advanced models may have higher costs associated. Check your OpenAI API subscription plan for details.
+- /temperature `<temperature>` Sets the temperature parameter of your OpenAI model. This is a way to control randomness of answers. Lower values (0. - 0.3) provide more deterministic answers, while high values ( 0.8 - 2.) may lead to more creative answers. High values may also result in less coherent or relevant answers.
+- /deleteme Deletes all your configuration and data from Talker's database, including your OpenAI token and your conversation history.
+
+This bot is provided free of charge. However, for you to interact with OpenAI models you need an OpenAI subscription. By using *Talker* with your OpenAI API key, you are effectively using tokens from your OpenAI subscription plan, and you will be charged by OpenAI accordingly. Please, check your OpenAI account settings for details.
+
+The source code of this bot can be found [here](https://github.com/samueloquien/talkerbot).
+"""
+                
     await update.message.reply_text(response, parse_mode='Markdown')
 
 async def token_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -119,9 +135,14 @@ async def token_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not update.effective_user or not update.message or not update.message.text:
         logger.error("Missing update.effective_user, update.message, or update.message.text in token command.")
         return
-    token = update.message.text.split()[-1]
+    try:
+        token = update.message.text.split(' ')[1]
+        response = "Alright, let's chat!"
+    except:
+        token = ''
+        response = 'Invalid token. Please provide a valid OpenAI API key with the /token command. Type /help for more info.'
     initialize_ai_config(update.effective_user, token)
-    await update.message.reply_text("Alright, let's chat!", parse_mode='Markdown')
+    await update.message.reply_text(response, parse_mode='Markdown')
 
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Update the AI prompt instructions. If no instructions are provided, the default
@@ -165,6 +186,16 @@ async def temperature_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     except:
         await update.message.reply_text(f"Invalid model temperature value {new_temperature}. Provide a value between 0. and 2.")
 
+async def deleteme(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Delete user from the database."""
+    if not update.effective_user or not update.message or not update.message.text:
+        logger.error("Missing update.effective_user, update.message, or update.message.text in reset command.")
+        return
+    user_id = update.effective_user.id
+    db.delete_conversation_history(str(user_id))
+    db.delete_openai_config(str(user_id))
+    await update.message.reply_text("All your data has been deleted from Talker's database. Hope to see you back here soon.", parse_mode='Markdown')
+
 async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Update the model of the AI."""
     if not update.effective_user or not update.message or not update.message.text:
@@ -191,7 +222,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     config = db.read_openai_config(str(user_id))
     response: str = ''
     if not config or not config['token']:
-        response = 'Please, enter a valid token using the /token command.'
+        response = 'Please, enter a valid token using the /token command. Type /help for more info.'
     else:
         history = db.read_conversation_history(str(user_id))
         num_messages = len(history)
@@ -214,6 +245,7 @@ ptb.add_handler(CommandHandler("token", token_command))
 ptb.add_handler(CommandHandler("reset", reset_command))
 ptb.add_handler(CommandHandler("forget", forget_command))
 ptb.add_handler(CommandHandler("temperature", temperature_command))
+ptb.add_handler(CommandHandler("deleteme", deleteme))
 ptb.add_handler(CommandHandler("model", model_command))
 
 # Add message handler for non-command messages
