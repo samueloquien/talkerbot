@@ -50,7 +50,8 @@ class AI():
         self.total_tokens: int = 0
         
         # Initialize the chat model
-        self.chat = ChatOpenAI(client=None, model=self.model, api_key=self.token, temperature=self.temperature)
+        token_str: str = self.token.get_secret_value()
+        self.chat = ChatOpenAI(client=None, model=self.model, api_key=token_str, temperature=self.temperature)
         
         self.verbose: bool = verbose
 
